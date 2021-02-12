@@ -19,17 +19,17 @@ const updateItemInDB = (deps, tableName, tinyId, item) => {
         S: item
       }
     },
-  };
+  }
 
 
   return deps.dbClient
     .putItem(params)
     .promise()
     .then((res) => {
-      return res;
+      return res
     })
     .catch((err) => { throw err })
-};
+}
 
 
 /**
@@ -38,9 +38,9 @@ const updateItemInDB = (deps, tableName, tinyId, item) => {
 * @returns {boolean} - Validity of str as TinyId
 */
 const validateTinyId = (str) => {
-  const pattern = new RegExp('^[a-zA-Z0-9]{0,22}$', 'i'); // uuidv4 base62
-  return !!pattern.test(str);
-};
+  const pattern = new RegExp('^[a-zA-Z0-9]{0,22}$', 'i') // uuidv4 base62
+  return !!pattern.test(str)
+}
 
 /**
  * Get item in database.
@@ -58,15 +58,15 @@ const getItemFromDB = (deps, tableName, id) => {
         S: id
       },
     },
-  };
+  }
 
 
   return deps.dbClient
     .getItem(params)
     .promise()
     .then((res) => res.Item)
-    .catch((err) => err);
-};
+    .catch((err) => err)
+}
 
 /**
  * Define redirect response.
@@ -82,7 +82,7 @@ const redirect = (statusCode, url) => ({
     'Access-Control-Allow-Credentials': true, // Required for cookies, authorization headers with HTTPS
   },
   body: null
-});
+})
 
 /**
  * Define json response.
@@ -98,7 +98,7 @@ const response = (statusCode, body) => ({
     'Access-Control-Allow-Credentials': true, // Required for cookies, authorization headers with HTTPS
   },
   body: JSON.stringify(body, null, 2),
-});
+})
 
 /**
  * Accept request, lookup tinyUrl in database and return results or error.
@@ -108,7 +108,7 @@ const response = (statusCode, body) => ({
  */
 //module.exports = (deps) => async (event) => {
 const getter = async (deps, event) => {
-  const request = event;
+  const request = event
 
   // Saving request to DynamoDB and respond
   if (
@@ -117,46 +117,46 @@ const getter = async (deps, event) => {
     request.pathParameters.proxy &&
     validateTinyId(request.pathParameters.proxy)
   ) {
-    const tinyId = request.pathParameters.proxy;
-    const tableName = process.env.DYNAMO_TABLE || 'shortUrlnerTable';
+    const tinyId = request.pathParameters.proxy
+    const tableName = process.env.DYNAMO_TABLE || 'shortUrlnerTable'
 
     try {
-      let record = await getItemFromDB(deps, tableName, tinyId);
+      let record = await getItemFromDB(deps, tableName, tinyId)
       if (record && record.UrlLong) {
-        const item = JSON.parse(record.UrlLong.S);
+        const item = JSON.parse(record.UrlLong.S)
 
         if (item.status !== 'ACTIVE') {
           return redirect(301, process.env.URL_404)
         }
 
-        item.count += 1;
+        item.count += 1
         switch (item.mode) {
           case 'EXPDATE':
-            const today = new Date();
-            const dateParts = item.expiredDate.split("/");
+            const today = new Date()
+            const dateParts = item.expiredDate.split("/")
             // month is 0-based, that's why we need dataParts[1] - 1
-            const expiredDate = new Date(+dateParts[2], dateParts[1] - 1, +dateParts[0]);
+            const expiredDate = new Date(+dateParts[2], dateParts[1] - 1, +dateParts[0])
 
             if (today > expiredDate) {
               return redirect(301, process.env.URL_404)
             }
-            break;
+            break
           case 'EXPCOUNTER':
             if (item.count === item.timesToExpire) {
-              item.status = 'BURNT';
+              item.status = 'BURNT'
             }
-            break;
+            break
           case 'ETERNAL':
-            break;
+            break
         }
 
 
         await updateItemInDB(deps, tableName, tinyId, JSON.stringify(item))
-        return redirect(item.redirectType, item.originalUrl);
+        return redirect(item.redirectType, item.originalUrl)
       } else {
         if (record && record.statusCode) {
-          const errorMsg = 'DyanmoDB: ' + record.name + ': ' + record.message;
-          if (record.statusCode >= 500) throw { message: errorMsg };
+          const errorMsg = 'DyanmoDB: ' + record.name + ': ' + record.message
+          if (record.statusCode >= 500) throw { message: errorMsg }
           return redirect(301, process.env.URL_404)
         }
         return redirect(301, process.env.URL_404)
@@ -166,9 +166,9 @@ const getter = async (deps, event) => {
     }
   } else {
     if (!request.pathParameters) {
-      return redirect(301, process.env.URL_404);
+      return redirect(301, process.env.URL_404)
     }
     return redirect(301, process.env.URL_404)
   }
-};
-module.exports = getter;
+}
+module.exports = getter

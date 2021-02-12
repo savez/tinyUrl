@@ -1,7 +1,7 @@
-const crypto = require('crypto');
-const base62 = require('base62/lib/ascii');
-const validator = require('validator');
-const { validate } = require("serverless-offline");
+const crypto = require('crypto')
+const base62 = require('base62/lib/ascii')
+const validator = require('validator')
+const { validate } = require("serverless-offline")
 /**
  * Validate if URL meets syntax.
  * @param {string} str - The URL to be verified.
@@ -13,24 +13,24 @@ const validateURL = (str) => {
     '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
     '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
     '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
-    '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+    '(\\?[&a-z\\d%_.~+=-]*)?' + // query string
     '(\\#[-a-z\\d_]*)?$',
     'i'
-  ); // fragment locator
-  return !!pattern.test(str);
-};
+  ) // fragment locator
+  return !!pattern.test(str)
+}
 
 const validateDate = (str) => {
   const pattern = new RegExp('(0[1-9]|[12][0-9]|3[01])[- \\/.](0[1-9]|1[012])[- \\/.](19|20)\\d\\d'
-  ); // fragment locator
-  return !!pattern.test(str);
-};
+  ) // fragment locator
+  return !!pattern.test(str)
+}
 
 /**
  * Generate base62 character uuid.
  * @returns {string} - UUID string
  */
-const generateUUID = () => base62.encode(parseInt(crypto.randomBytes(16).toString('hex'), 16)).substr(0, 6);
+const generateUUID = () => base62.encode(parseInt(crypto.randomBytes(16).toString('hex'), 16)).substr(0, 6)
 
 /**
  * Save item in database.
@@ -53,17 +53,17 @@ const saveItemInDB = (deps, tableName, tinyId, url) => {
         S: url
       }
     },
-  };
+  }
 
 
   return deps.dbClient
     .putItem(params)
     .promise()
     .then((res) => {
-      return res;
+      return res
     })
     .catch((err) => { throw err })
-};
+}
 
 
 const getItemFromDB = (deps, tableName, id) => {
@@ -74,15 +74,15 @@ const getItemFromDB = (deps, tableName, id) => {
         S: id
       },
     },
-  };
+  }
 
 
   return deps.dbClient
     .getItem(params)
     .promise()
     .then((res) => res.Item)
-    .catch((err) => err);
-};
+    .catch((err) => err)
+}
 
 /**
  * Define json response.
@@ -98,7 +98,7 @@ const response = (statusCode, body) => ({
     'Access-Control-Allow-Credentials': true, // Required for cookies, authorization headers with HTTPS
   },
   body: JSON.stringify(body, null, 2),
-});
+})
 
 /**
  * Validates request, put tinyUrl in database and return results or error.
@@ -108,61 +108,61 @@ const response = (statusCode, body) => ({
  * @returns {} - Response
  */
 const generate = async (deps, event) => {
-  const request = event;
-  const body = JSON.parse(request.body) || {};
+  const request = event
+  const body = JSON.parse(request.body) || {}
   //body.originalUrl = encodeURIComponent(body.originalUrl)
-  let validationErrors = await validateBody(body);
+  let validationErrors = await validateBody(body)
 
   if (validationErrors) {
     return validationErrors
   }
   // Generating uuid
-  let tinyId = generateUUID();
-  const tableName = process.env.DYNAMO_TABLE || 'shortUrlnerTable';
+  let tinyId = generateUUID()
+  const tableName = process.env.DYNAMO_TABLE || 'shortUrlnerTable'
   // Saving request to DynamoDB and respond
   try {
-    let tinyIsFree = false;
+    let tinyIsFree = false
     do {
-      const tinyPresent = await getItemFromDB(deps, tableName, tinyId);
+      const tinyPresent = await getItemFromDB(deps, tableName, tinyId)
       if (tinyPresent) {
-        tinyId = generateUUID();
+        tinyId = generateUUID()
       } else {
-        tinyIsFree = true;
+        tinyIsFree = true
 
       }
     } while (!tinyIsFree)
 
-    body.count = 0;
-    body.timesToExpire = body.timesToExpire || 0;
-    body.status = body.status || 'ACTIVE';
-    body.mode = body.mode || 'ETERNAL';
-    let record = await saveItemInDB(deps, tableName, tinyId, JSON.stringify(body));
+    body.count = 0
+    body.timesToExpire = body.timesToExpire || 0
+    body.status = body.status || 'ACTIVE'
+    body.mode = body.mode || 'ETERNAL'
+    let record = await saveItemInDB(deps, tableName, tinyId, JSON.stringify(body))
     if (record && record.statusCode) {
-      return response(500, { message: record.name + ': ' + record.message });
+      return response(500, { message: record.name + ': ' + record.message })
     }
-    return response(200, { tinyId: 'https://sntg.it/' + tinyId });
+    return response(200, { tinyId: 'https://sntg.it/' + tinyId })
   } catch (err) {
-    return response(500, { message: err.message });
+    return response(500, { message: err.message })
   }
-};
+}
 
 const validateBody = async (body) => {
   if (!body.originalUrl || validator.isEmpty(body.originalUrl)) {
-    return response(422, { message: `Url is required` });
+    return response(422, { message: `Url is required` })
   }
   if (body.expiredDate) {
     if (!validateDate(body.expiredDate)) {
-      return response(422, { message: `expiredDate malformed` });
+      return response(422, { message: `expiredDate malformed` })
     }
 
   }
   if (!body.redirectType) {
-    return response(422, { message: `redirectType is required` });
+    return response(422, { message: `redirectType is required` })
   }
   if (!validator.contains(body.redirectType.toString(), '301') && !validator.contains(body.redirectType.toString(), '302')) {
-    return response(422, { message: `redirectType is invalid. Valid values are 301,302` });
+    return response(422, { message: `redirectType is invalid. Valid values are 301,302` })
   }
-  return null;
+  return null
 }
 
-module.exports = generate;
+module.exports = generate
