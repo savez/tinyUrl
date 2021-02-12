@@ -1,0 +1,27 @@
+{
+  "name": "tinyurl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/savez/tinyUrl.git"
+  },
+  "keywords": [
+    "shorturlner",
+    "tinyurl"
+  ],
+  "author": "Saverio M.",
+  "license": "ISC",
+  "devDependencies": {},
+  "dependencies": {
+    "aws-sdk": "^2.799.0",
+    "axios": "^0.21.0",
+    "base62": "^2.0.1",
+    "crypto": "^1.0.1",
+    "validator": "^13.1.17"
+  }
+}
